@@ -51,13 +51,23 @@ export async function GET(request: NextRequest) {
 
     // 새로운 데이터 가져오기
     const weatherService = new WeatherService();
-    const weather = await weatherService.getCurrentWeather(latitude, longitude);
+    
+    // 현재 날씨와 예보를 함께 가져오기
+    const [weather, forecast] = await Promise.all([
+      weatherService.getCurrentWeather(latitude, longitude),
+      weatherService.getWeatherForecast(latitude, longitude)
+    ]);
+
+    const result = {
+      current: weather,
+      forecast: forecast
+    };
 
     // 캐시에 저장
-    setCachedWeather(cacheKey, weather);
+    setCachedWeather(cacheKey, result);
     console.log('Cached new weather data for:', cacheKey);
 
-    return NextResponse.json(weather);
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Weather API error:', error);
     return NextResponse.json(
