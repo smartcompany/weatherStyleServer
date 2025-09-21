@@ -51,7 +51,7 @@ export interface UserPreferences {
 }
 
 export interface RecommendationRequest {
-  weather: Weather;
+  weather: import('./weather').Weather;
   preferences: UserPreferences;
 }
 

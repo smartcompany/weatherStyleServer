@@ -4,9 +4,9 @@ import {
   StyleCategory, 
   WeatherType, 
   Gender,
-  UserPreferences,
-  Weather
+  UserPreferences
 } from '@/types/style';
+import { Weather } from '@/types/weather';
 
 export class StyleService {
   async getStyleRecommendations(
