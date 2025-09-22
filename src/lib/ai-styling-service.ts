@@ -19,8 +19,8 @@ export interface StylingRequest {
   imageUrl: string;
   weather: Weather;
   stylePreset: 'casual' | 'smart_casual' | 'date' | 'outdoor' | 'business';
-  colorPreferences?: string[];
-  bodyNotes?: string;
+  recommendedItems?: string[];
+  preferredLanguage?: string;
 }
 
 export interface StylingResponse {
@@ -90,7 +90,7 @@ export class AIStylingService {
 
       // 3. OpenAI API 호출
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4-vision-preview',
+        model: 'gpt-5-mini',
         messages: [
           {
             role: 'system',
@@ -147,8 +147,6 @@ export class AIStylingService {
       .replace('{NUMBER}', request.weather.temperature.toString())
       .replace('{STRING}', request.weather.description)
       .replace('{STYLE_PRESET}', `"${request.stylePreset}"`)
-      .replace('{COLOR_PREFERENCES}', JSON.stringify(request.colorPreferences || null))
-      .replace('{BODY_NOTES}', JSON.stringify(request.bodyNotes || null));
   }
 
   async uploadImageToSupabase(imageBase64: string, fileName: string): Promise<string> {

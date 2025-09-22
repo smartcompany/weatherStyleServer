@@ -1,58 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AIStylingService, StylingRequest } from '@/lib/ai-styling-service';
-import { WeatherService } from '@/lib/weather-service';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { 
-      imageBase64, 
-      latitude, 
-      longitude, 
-      stylePreset = 'casual',
-      colorPreferences,
-      bodyNotes 
-    } = body;
+    const formData = await request.formData();
+    
+    // 이미지 파일 또는 URL
+    const imageFile = formData.get('image') as File | null;
+    const imageUrl = formData.get('imageUrl') as string | '';
+    
+    // 스타일 정보
+    const stylePreset = formData.get('stylePreset') as string || 'casual';
+    const recommendedItems = formData.get('recommendedItems') as string || '';
+    
+    // 날씨 정보
+    const weatherTemp = formData.get('weatherTemp') as string;
+    const weatherDescription = formData.get('weatherDescription') as string || '';
+    const weatherMain = formData.get('weatherMain') as string || '';
+    const weatherLocation = formData.get('weatherLocation') as string || '';
+    
+    // 사용자 설정
+    const preferredLanguage = formData.get('preferredLanguage') as string || 'ko';
 
     // 필수 데이터 검증
-    if (!imageBase64) {
+    if (!imageFile && !imageUrl) {
       return NextResponse.json(
-        { error: 'Image data is required' },
+        { error: 'Image file or URL is required' },
         { status: 400 }
       );
     }
 
-    if (!latitude || !longitude) {
+    if (!weatherTemp) {
       return NextResponse.json(
-        { error: 'Location coordinates are required' },
+        { error: 'Weather temperature is required' },
         { status: 400 }
       );
     }
 
     const aiStylingService = new AIStylingService();
-    const weatherService = new WeatherService();
 
     try {
-      // 1. 현재 날씨 정보 가져오기
-      const currentWeather = await weatherService.getCurrentWeather(
-        parseFloat(latitude),
-        parseFloat(longitude)
-      );
+      // 1. 날씨 정보 재구성
+      const currentWeather = {
+        temperature: parseFloat(weatherTemp),
+        description: weatherDescription,
+        main: weatherMain,
+        location: weatherLocation,
+        timestamp: new Date().toISOString(),
+        humidity: 65, // 기본값
+        windSpeed: 3.5, // 기본값
+        feelsLike: parseFloat(weatherTemp) + 2, // 기본값
+        icon: '01d', // 기본값
+      };
 
-      // 2. 이미지를 Supabase에 업로드
-      const fileName = `user-photo-${Date.now()}.jpg`;
-      const imageUrl = await aiStylingService.uploadImageToSupabase(
-        imageBase64,
-        fileName
-      );
+      // 2. 이미지 처리 (URL이 있으면 사용, 없으면 업로드)
+      let finalImageUrl = imageUrl;
+      
+      if (!imageUrl && imageFile) {
+        // 이미지 파일을 Supabase에 업로드
+        const fileName = `user-photo-${Date.now()}.jpg`;
+        const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+        const imageBase64 = imageBuffer.toString('base64');
+        finalImageUrl = await aiStylingService.uploadImageToSupabase(
+          imageBase64,
+          fileName
+        );
+      }
 
       // 3. AI 스타일링 요청 생성
+      const validStylePresets = ['casual', 'smart_casual', 'date', 'outdoor', 'business'] as const;
+      const validatedStylePreset = validStylePresets.includes(stylePreset as any) 
+        ? stylePreset as 'casual' | 'smart_casual' | 'date' | 'outdoor' | 'business'
+        : 'casual';
+
       const stylingRequest: StylingRequest = {
-        imageUrl,
+        imageUrl: finalImageUrl || '',
         weather: currentWeather,
-        stylePreset,
-        colorPreferences,
-        bodyNotes,
+        stylePreset: validatedStylePreset,
+        recommendedItems: recommendedItems.split(',').filter(item => item.trim()),
+        preferredLanguage,
       };
 
       // 4. AI 스타일링 실행
@@ -65,8 +91,11 @@ export async function POST(request: NextRequest) {
         success: true,
         data: stylingResult,
         metadata: {
-          originalImageUrl: imageUrl,
+          originalImageUrl: finalImageUrl,
           weather: currentWeather,
+          recommendedItems: recommendedItems.split(',').filter(item => item.trim()),
+          stylePreset,
+          preferredLanguage,
           timestamp: new Date().toISOString(),
         },
       });
@@ -74,22 +103,14 @@ export async function POST(request: NextRequest) {
     } catch (aiError) {
       console.error('AI 처리 오류:', aiError);
       
-      // AI 오류 시 더미 응답 반환
-      const dummyResponse = aiStylingService.getDummyStylingResponse();
-      
-      return NextResponse.json({
-        success: true,
-        data: dummyResponse,
-        metadata: {
-          originalImageUrl: 'dummy',
-          weather: await weatherService.getCurrentWeather(
-            parseFloat(latitude),
-            parseFloat(longitude)
-          ),
-          timestamp: new Date().toISOString(),
-          note: 'AI 서비스 일시 중단으로 더미 데이터 제공',
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'AI styling analysis failed',
+          details: aiError instanceof Error ? aiError.message : 'AI service error'
         },
-      });
+        { status: 500 }
+      );
     }
 
   } catch (error) {
