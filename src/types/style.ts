@@ -45,14 +45,7 @@ export interface UserPreferences {
   gender: Gender;
   preferredStyles: StyleCategory[];
   preferredColors: string[];
-  notificationsEnabled: boolean;
   preferredLanguage: string;
-  adsEnabled: boolean;
-}
-
-export interface RecommendationRequest {
-  weather: import('./weather').Weather;
-  preferences: UserPreferences;
 }
 
 export interface RecommendationResponse {

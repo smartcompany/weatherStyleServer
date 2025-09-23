@@ -8,19 +8,17 @@ export async function POST(request: NextRequest) {
     // 이미지 파일 또는 URL
     const imageFile = formData.get('image') as File | null;
     const imageUrl = formData.get('imageUrl') as string | '';
+    const location = formData.get('location') as string || '';
     
     // 스타일 정보
     const stylePreset = formData.get('stylePreset') as string || 'casual';
     const recommendedItems = formData.get('recommendedItems') as string || '';
     
-    // 날씨 정보
-    const weatherTemp = formData.get('weatherTemp') as string;
-    const weatherDescription = formData.get('weatherDescription') as string || '';
-    const weatherMain = formData.get('weatherMain') as string || '';
-    const weatherLocation = formData.get('weatherLocation') as string || '';
+    // 날씨 정보 요약 문자열
+    const weatherSummary = formData.get('weatherSummary') as string || '';
     
     // 사용자 설정
-    const preferredLanguage = formData.get('preferredLanguage') as string || 'ko';
+    const preferredLanguage = formData.get('preferredLanguage') as string || 'en';
 
     // 필수 데이터 검증
     if (!imageFile && !imageUrl) {
@@ -30,9 +28,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!weatherTemp) {
+    if (!weatherSummary) {
       return NextResponse.json(
-        { error: 'Weather temperature is required' },
+        { error: 'Weather summary is required' },
         { status: 400 }
       );
     }
@@ -40,20 +38,6 @@ export async function POST(request: NextRequest) {
     const aiStylingService = new AIStylingService();
 
     try {
-      // 1. 날씨 정보 재구성
-      const currentWeather = {
-        temperature: parseFloat(weatherTemp),
-        description: weatherDescription,
-        main: weatherMain,
-        location: weatherLocation,
-        timestamp: new Date().toISOString(),
-        humidity: 65, // 기본값
-        windSpeed: 3.5, // 기본값
-        feelsLike: parseFloat(weatherTemp) + 2, // 기본값
-        icon: '01d', // 기본값
-      };
-
-      // 2. 이미지 처리 (URL이 있으면 사용, 없으면 업로드)
       let finalImageUrl = imageUrl;
       
       if (!imageUrl && imageFile) {
@@ -75,16 +59,35 @@ export async function POST(request: NextRequest) {
 
       const stylingRequest: StylingRequest = {
         imageUrl: finalImageUrl || '',
-        weather: currentWeather,
+        weatherSummary: weatherSummary,
+        location: location,
         stylePreset: validatedStylePreset,
         recommendedItems: recommendedItems.split(',').filter(item => item.trim()),
         preferredLanguage,
       };
 
       // 4. AI 스타일링 실행
+      console.log('AI 스타일링 요청 시작:', {
+        imageUrl: finalImageUrl,
+        weatherSummary,
+        location,
+        stylePreset: validatedStylePreset,
+        recommendedItems: recommendedItems.split(',').filter(item => item.trim()),
+        preferredLanguage,
+      });
+
       const stylingResult = await aiStylingService.generateStyleRecommendation(
         stylingRequest
       );
+
+      console.log('AI 스타일링 결과:', {
+        success: stylingResult ? true : false,
+        hasImageUrl: stylingResult?.imageUrl ? true : false,
+        hasDescription: stylingResult?.description ? true : false,
+        hasItems: stylingResult?.items ? stylingResult.items.length : 0,
+        hasTips: stylingResult?.tips ? stylingResult.tips.length : 0,
+        resultKeys: stylingResult ? Object.keys(stylingResult) : [],
+      });
 
       // 5. 응답 반환
       return NextResponse.json({
@@ -92,7 +95,8 @@ export async function POST(request: NextRequest) {
         data: stylingResult,
         metadata: {
           originalImageUrl: finalImageUrl,
-          weather: currentWeather,
+          weatherSummary: weatherSummary,
+          location: location,
           recommendedItems: recommendedItems.split(',').filter(item => item.trim()),
           stylePreset,
           preferredLanguage,
