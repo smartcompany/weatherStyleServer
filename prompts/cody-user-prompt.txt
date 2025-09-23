@@ -1,58 +1,31 @@
-Task: Replace only the outfit in the person’s photo to fit today’s weather and requested style.
+작업: 
+ 오늘의 날씨와 요청된 스타일에 맞게, 인물 사진에서 의상만 교체하시오
 
-INPUTS:
-- image_url: {IMAGE_URL}
-- location: {CITY_COUNTRY}   // e.g., "Seoul, KR"
-- datetime_local: {YYYY-MM-DDTHH:mm}
-- weather:
-  - temp_c: {NUMBER}         // e.g., 22.4
-  - feels_like_c: {NUMBER}
-  - condition: {STRING}      // e.g., "light rain", "overcast", "sunny"
-  - precipitation_mm: {NUMBER}
-  - wind_mps: {NUMBER}
-  - humidity_pct: {NUMBER}
-- style_preset: {“casual” | “smart_casual” | “date” | “outdoor” | “business”}
-- keep_face: true            // preserve identity
-- keep_background: true      // unless false
-- color_preferences_optional: {ARRAY or null} // e.g., ["olive","navy","ivory"]
-- body_notes_optional: {STRING or null}       // e.g., "prefer tapered pants, avoid skinny"
+인물 사진 : {IMAGE_URL}
+위치 : {CITY_COUNTRY}
+날짜 : {DATE_TIME}
+날씨 : {WEATHER_CONDITION}
+원하는 코디 스타일: {STYLE_PRESET}
+얼굴 유지 여부: true
+배경 유지 여부: true
 
-RENDERING REQUIREMENTS:
-- Replace clothes only; keep face, body, pose, umbrella, and scene intact.
-- Weather logic:
-  * Rain: water-resistant outer/top layers, quick-dry trousers, non-slip sneakers.
-  * Heat (>27°C): lightweight/breathable, short sleeves, no heavy layers.
-  * Mild (18–27°C): short sleeves/knit + light overshirt/jacket optional.
-  * Cool (10–17°C): long sleeves, light jacket, layerable mid-weights.
-  * Cold (<10°C): insulated layers, beanie/scarf optional.
-  * Wind (>8 m/s): wind-blocking shell or sturdy overshirt.
-- Silhouette: modern straight/tapered; avoid overly skinny or baggy, ensure sleeve/hem lengths natural.
-- Footwear: weather-appropriate; no leather soles on wet decks.
-- No brand logos. Natural textures. Realistic fabric physics.
+렌더링 요구사항:
+	•	의상만 교체하고 얼굴, 몸, 포즈, 우산, 배경은 그대로 유지할 것.
+	•	날씨 로직:
+	•	비: 방수 기능 있는 아우터/상의, 퀵드라이 바지, 논슬립 스니커즈
+	•	더움(27°C 초과): 가볍고 통기성 있는 소재, 반소매, 두꺼운 레이어 금지
+	•	온화함(18–27°C): 반소매/니트 + 가벼운 오버셔츠나 재킷 선택 가능
+	•	서늘함(10–17°C): 긴팔, 가벼운 재킷, 레이어드 가능한 중간 두께 아이템
+	•	추움(10°C 미만): 보온성 있는 레이어, 비니/머플러 선택 사항
+	•	바람(초속 8m/s 이상): 방풍 셸이나 튼튼한 오버셔츠
+	•	실루엣: 현대적인 스트레이트/테이퍼드, 너무 슬림하거나 헐렁한 핏은 피하고 소매/밑단 길이는 자연스럽게 유지
+	•	신발: 날씨에 적합한 것, 젖은 바닥에서는 가죽 밑창 금지
+	•	브랜드 로고 없음, 자연스러운 질감, 현실적인 원단 물리감 유지
 
-OUTPUT FORMAT (JSON only; no markdown, no comments):
+출력 형석 (JSON only, no markdown, no comments):
 {
   "image_url": "https://...",          // edited image URL
   "style": "casual",
-  "weather_tag": "rainy, mild",
-  "palette": ["ivory","khaki","olive","white"],
-  "materials": ["water-resistant nylon","cotton knit","quick-dry stretch twill"],
-  "outfit_summary": "…한 문단으로 전체 코디 요약(전문가 톤, 2–3문장).",
-  "items": [
-    {"category":"outer","name":"water-resistant shirt-jacket","color":"khaki","fit":"regular","notes":"drop-shoulder minimal; snap buttons; DWR finish"},
-    {"category":"top","name":"lightweight crewneck knit","color":"ivory","fit":"regular","notes":"fine-gauge; breathable"},
-    {"category":"bottom","name":"tapered quick-dry chinos","color":"olive","fit":"tapered","notes":"ankle-length ~9–10부; slight stretch"},
-    {"category":"shoes","name":"minimal sneakers (non-slip sole)","color":"white","fit":"true to size","notes":"rubber outsole for wet deck"},
-    {"category":"accessory","name":"folding umbrella","color":"black","notes":"keep original"}
-  ],
-  "why_it_works": [
-    "방수/퀵드라이 소재로 비에 대응",
-    "아이보리×카키×올리브의 저채도 팔레트로 자연 배경과 조화",
-    "테이퍼드 실루엣으로 상체 비율 보정"
-  ],
+  "outfit_summary": "한 문단으로 전체 코디 요약(전문가 톤, 2–3문장).",
   "care_tips": ["귀가 후 겉감 표면 물기 털고 자연건조","운동화는 신문지로 수분 제거"],
-  "alternatives": [
-    {"swap":"outer → lightweight rain parka","when":"강수량 5mm/h 이상 or 강풍"},
-    {"swap":"top → moisture-wicking tee","when":"체감 27°C 이상 더울 때"}
-  ]
 }

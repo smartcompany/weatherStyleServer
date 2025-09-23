@@ -23,19 +23,6 @@ export interface StylingRequest {
   preferredLanguage?: string;
 }
 
-export interface StylingResponse {
-  imageUrl: string;
-  style: string;
-  weatherTag: string;
-  palette: string[];
-  materials: string[];
-  outfitSummary: string;
-  items: OutfitItem[];
-  whyItWorks: string[];
-  careTips: string[];
-  alternatives: Alternative[];
-}
-
 export interface OutfitItem {
   category: string;
   name: string;
@@ -80,7 +67,7 @@ export class AIStylingService {
     }
   }
 
-  async generateStyleRecommendation(request: StylingRequest): Promise<StylingResponse> {
+  async generateStyleRecommendation(request: StylingRequest): Promise<any> {
     try {
       // 1. 프롬프트 로드
       const { systemPrompt, userPrompt } = await this.getPrompts();
@@ -123,12 +110,8 @@ export class AIStylingService {
       }
 
       // JSON 파싱
-      const stylingResult = JSON.parse(responseText) as StylingResponse;
-      
-      // 5. 생성된 이미지 Supabase에 저장 (선택사항)
-      // await this.saveGeneratedImage(stylingResult.imageUrl);
-
-      return stylingResult;
+      const jsonResponse = JSON.parse(responseText) 
+      return jsonResponse;
     } catch (error) {
       console.error('AI 스타일링 오류:', error);
       throw new Error(`AI 스타일링 실패: ${error}`);
@@ -143,9 +126,8 @@ export class AIStylingService {
     return template
       .replace('{IMAGE_URL}', request.imageUrl)
       .replace('{CITY_COUNTRY}', location)
-      .replace('{YYYY-MM-DDTHH:mm}', datetime)
-      .replace('{NUMBER}', request.weather.temperature.toString())
-      .replace('{STRING}', request.weather.description)
+      .replace('{DATE_TIME}', datetime)
+      .replace('{WEATHER_CONDITION}', request.weather.description)
       .replace('{STYLE_PRESET}', `"${request.stylePreset}"`)
   }
 
