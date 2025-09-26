@@ -78,54 +78,43 @@ export class AIStylingService {
 
   async generateStyleRecommendation(request: StylingRequest): Promise<any> {
     try {
-      // 1. 프롬프트 로드
-      const { systemPrompt, userPrompt } = await this.getPrompts();
+      // 1. 원본 이미지 다운로드
+      console.log('이미지 다운로드 시작:', request.imageUrl);
+      const imageResponse = await fetch(request.imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`이미지 다운로드 실패: ${imageResponse.status}`);
+      }
+      
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const image = Buffer.from(imageBuffer);
+      console.log('이미지 다운로드 완료, 크기:', image.length);
 
-      // 2. 사용자 프롬프트에 실제 데이터 삽입
+      const { systemPrompt, userPrompt } = await this.getPrompts();
       const populatedUserPrompt = this.populatePromptTemplate(userPrompt, request);
 
-      // 3. OpenAI API 호출
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-5-mini',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: populatedUserPrompt,
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: request.imageUrl,
-                },
-              },
-            ],
-          },
-        ],
-        max_completion_tokens: 2000
-      });
+        console.log('이미지 편집 시작...');
+        const completion = await openai.images.edit({
+          model: "gpt-image-1",
+          image: new File([image], 'image.jpg', { type: 'image/jpeg' }),
+          prompt: populatedUserPrompt,
+        });
 
-      // 4. 응답 파싱
-      console.log('OpenAI 응답 전체:', JSON.stringify(completion, null, 2));
-      console.log('choices 개수:', completion.choices?.length);
-      console.log('첫 번째 choice:', completion.choices?.[0]);
-      
-      const responseText = completion.choices[0]?.message?.content;
-      console.log('응답 텍스트:', responseText);
-      
-      if (!responseText) {
-        throw new Error('AI 응답을 받지 못했습니다.');
-      }
+        console.log('이미지 편집 응답:', completion);
 
-      // JSON 파싱
-      const jsonResponse = JSON.parse(responseText) 
-      return jsonResponse;
+       const url = completion.data?.[0]?.url ?? null;
+       if (!url) {
+         throw new Error("no image url from API");
+       }
+
+       return {
+         image_url: url,
+         style: request.stylePreset,
+         outfit_summary: `Weather-appropriate ${request.stylePreset} outfit for ${request.location}`,
+         care_tips: [
+           "Follow care instructions on clothing labels",
+           "Store items properly to maintain shape"
+         ]
+       };
     } catch (error) {
       console.error('AI 스타일링 오류:', error);
       throw new Error(`AI 스타일링 실패: ${error}`);
